@@ -1,0 +1,190 @@
+/*******************************************************************  FINAL PROJECT  *******************************************************************/
+/*******************************************************************  FINAL PROJECT  *******************************************************************/
+/*******************************************************************  FINAL PROJECT  *******************************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+double acceleration(int, int);
+double distance(int, int);
+
+int max_steps=5000;                                                                                           /******** Maximum number of steps ********/
+double timestep=0.0001;                                                                                       /******** Length of each timestep ********/
+double radius=0.01;                                                                                           /******** Radius of moving object ********/
+double radius_minus=0.1;                                                                                      /******** Radius of mass_minus ********/
+double radius_plus=0.1;                                                                                       /******** Radius of mass_plus ********/
+
+double mass_minus;                                                                                            /******** Mass of object fixed at (-1,0) ********/
+double mass_plus;                                                                                             /******** Mass of object fixed at (+1,0) ********/
+double** r;                                                                                                   /******** r is a 2 dimensional array which will store the positions of the moving object ********/
+double vel_x;                                                                                                 /******** x-component of intial velocity ********/
+double vel_y;                                                                                                 /******** y-component of intial velocity ********/
+double dist_minus;                                                                                            /******** This will keep track of the distance of the moving object from the object fixed at (-1,0) ********/
+double dist_plus;                                                                                             /******** This will keep track of the distance of the moving object from the object fixed at (+1,0) ********/
+int COLLISION = -1;                                                                                           /******** Set collision exit flag ********/
+int i,j;
+
+
+int main(int argc, char *argv[])
+{
+    
+    /****************  ALLOCATING MEMORY FOR THE ARRAY r  ****************/
+    /****************  ALLOCATING MEMORY FOR THE ARRAY r  ****************/
+    
+    r=(double**)malloc(2*sizeof(double*));                                                                    /******** Allocates memory for the two pointers which point to the beginning of the two rows of r ********/
+    if(r == NULL)
+    {
+        fprintf(stderr, "Unable allocate memory for the array. Exiting...\n");
+    }
+    
+    for(i=0; i<=1; i++)
+    {
+        r[i] = malloc((max_steps)*sizeof(double));
+        if(r[i]==NULL)
+        {
+            fprintf(stderr, "Unable allocate memory for the array. Exiting...\n");
+            break;
+        }
+    }
+    
+    for(i=0; i<=1; i++)
+    {
+        for(j=0; j<max_steps; j++) r[i][j]=0;									    /******** Initialises array as zeros ********/
+    }
+    
+    
+    /****************  INPUT / VALIDATION: CHECK NUMBER OF ARGUMENTS AND READ INPUT  ****************/
+    /****************  INPUT / VALIDATION: CHECK NUMBER OF ARGUMENTS AND READ INPUT  ****************/
+    
+    int validInput;
+    validInput = (argc == 7);
+    validInput = validInput && sscanf(argv[1], "%lf", &mass_minus);
+    validInput = validInput && mass_minus>=0;
+    validInput = validInput && sscanf(argv[2], "%lf", &mass_plus);
+    validInput = validInput && mass_plus>=0;
+    validInput = validInput && sscanf(argv[3], "%lf", &r[0][0]);                                              /******** x-coordinate of inital position ********/
+    validInput = validInput && sscanf(argv[4], "%lf", &r[1][0]);                                              /******** y-coordinate of inital position ********/
+    validInput = validInput && sscanf(argv[5], "%lf", &vel_x);                                                /******** x-coordinate of inital velocity ********/
+    validInput = validInput && sscanf(argv[6], "%lf", &vel_y);                                                /******** y-coordinate of inital velocity ********/
+    validInput = validInput && (max_steps>=0) && (timestep>0) && (radius>=0) && (radius_minus>=0) && (radius_plus>=0);
+    
+    if(!validInput)                                                                                           /******** This is for when invalid trajectory data are given ********/
+    {
+        printf("Input validation failure. Exiting...\n");
+        return(EXIT_FAILURE);
+    }
+    
+    
+    /****************  CALCULATE POSITION AFTER ONE TIMESTEP (I.E. (r[0][1], r[1][1])  ****************/
+    /****************  CALCULATE POSITION AFTER ONE TIMESTEP (I.E. (r[0][1], r[1][1])  ****************/
+    
+    double initialAcc_x = acceleration(0,0);                                                                  /******** Calculate x-component of initial acceleration ********/
+    double initialAcc_y = acceleration(1,0);                                                                  /******** Calculate y-component of initial acceleration ********/
+    
+    double displacement_x = (vel_x)*timestep + 0.5*(initialAcc_x)*pow(timestep,2);                            /******** Calculate x-displacement in first timestep ********/
+    double displacement_y = (vel_y)*timestep + 0.5*(initialAcc_y)*pow(timestep,2);                            /******** Calculate y-displacement in first timestep ********/
+    
+    r[0][1] = r[0][0] + displacement_x;                                                                       /******** Calculate x-position after one timestep ********/
+    r[1][1] = r[1][0] + displacement_y;                                                                       /******** Calculate y-position after one timestep ********/
+    
+    
+    /****************  CALCULATE FURTHER POSITIONS & DISTANCES, CHECK FOR COLLISIONS  ****************/
+    /****************  CALCULATE FURTHER POSITIONS & DISTANCES, CHECK FOR COLLISIONS  ****************/
+    
+    for(j=0; (j<=1) && (COLLISION == -1); j++)                                                                /******** Finds positions and checks for collisions (stopping if one is found) after 0 and 1 timesteps ********/
+    {
+        dist_minus = distance(0,j);                                                                           /******** Calculate distance from mass_minus ********/
+        dist_plus = distance(1,j);                                                                            /******** Calculate distance from mass_plus ********/
+        
+        if(dist_minus <= (radius + radius_minus))                                                             /******** Check if collision with mass_minus has occurred ********/
+        {
+            COLLISION=j;                                                                                      /******** Stores timestep at which collision has occurred ********/
+            printf("Projectile has collided with the body fixed at (-1,0) after %i timesteps\n", COLLISION);
+        }
+        
+        if(dist_plus <= (radius + radius_plus))                                                               /******** Check if collision with mass_plus has occurred ********/
+        {
+            COLLISION=j;                                                                                      /******** Stores timestep at which collision has occurred ********/
+            printf("Projectile has collided with the body fixed at (+1,0) after %i timesteps.\n", COLLISION);
+        }
+    }
+    
+    for(j=2; (j<=max_steps-1) && (COLLISION == -1); j++)                                                      /******** Finds positions and checks for collisions for after 2 timesteps up to min[max_steps, time of collision] timesteps ********/
+    {
+        r[0][j] = (pow(timestep,2))*(acceleration(0,j-1)) + 2*r[0][j-1] - r[0][j-2];                          /******** Calculate x-position after j timesteps ********/
+        r[1][j] = (pow(timestep,2))*(acceleration(1,j-1)) + 2*r[1][j-1] - r[1][j-2];                          /******** Calculate y-position after j timesteps ********/
+        
+        dist_minus = distance(0,j);                                                                           /******** Calculate distance from mass_minus ********/
+        dist_plus = distance(1,j);                                                                            /******** Calculate distance from mass_plus ********/
+        
+        if(dist_minus <= (radius + radius_minus))                                                             /******** Check if collision with mass_minus has occurred ********/
+        {
+            COLLISION=j;                                                                                      /******** Stores timestep at which collision has occurred ********/
+            printf("Projectile has collided with the body fixed at (-1,0) after %i timesteps.\n", COLLISION);
+        }
+        
+        if(dist_plus <= (radius + radius_plus))                                                               /******** Check if collision with mass_plus has occurred ********/
+        {
+            COLLISION=j;                                                                                      /******** Stores timestep at which collision has occurred ********/
+            printf("Projectile has collided with the body fixed at (+1,0) after %i timesteps.\n", COLLISION);
+        }
+    }
+    
+    if(COLLISION==-1)                                                                                         /******** Check if any collision has occurred ********/
+    {
+        printf("Projectile did not collide with either of the fixed bodies before the maximum number of steps were completed.\n");
+    }
+    
+    
+    /****************  OUTPUT TRAJECTORY TO FILE  ****************/
+    /****************  OUTPUT TRAJECTORY TO FILE  ****************/
+    
+    FILE * trajectory_textfile = fopen("1205262_proj1.out", "w");                                             /******** Creates a text file I can write the projectile's trajectory to ********/
+    
+    /* Check if the file pointer is valid */
+    if(trajectory_textfile==(FILE*) NULL)                                                                     /******** Checks whether file opened correctly ********/
+    {
+        printf("Unable to open required file.\n");
+        return(EXIT_FAILURE);
+    }
+    
+    for (j=0; (j<=max_steps-1) && ((COLLISION==-1)||(j<=COLLISION)); j++)                                     /******** Goes up to max_steps or time of collision, whichever is lower ********/
+    {
+        fprintf(trajectory_textfile, "%i %f %f\n", j, r[0][j], r[1][j]);                                      /******** Plots #timestep in first column, x-position in second and y-position in third ********/
+    }
+    fclose(trajectory_textfile);                                                                              /******** Closes file after it's been written ********/
+    
+    
+    /****************  ALLOCATED MEMORY FREED  ****************/
+    /****************  ALLOCATED MEMORY FREED  ****************/
+    
+    for(i=0; i<=1; i++)
+    {
+        free(r[i]);                                                                                           /******** Frees allocated memory for rows of r ********/
+    }
+    free(r);                                                                                                  /******** Frees allocated memory for r ********/
+    
+    
+    return(EXIT_SUCCESS);
+}
+
+
+/****************  FUNCTIONS DEFINED  ****************/
+/****************  FUNCTIONS DEFINED  ****************/
+
+double acceleration(int i, int j)                                                                             /******** First variable is 0 for x-value, 1 for y-value, and second variable denotes number of timesteps ********/
+{
+    double acc;
+    
+    acc = -(mass_minus)*(r[i][j] + (1-i))/(pow(sqrt(pow((r[0][j] + 1), 2) + pow((r[1][j]), 2)), 3)) - (mass_plus)*(r[i][j] - (1-i))/(pow(sqrt(pow((r[0][j] - 1), 2) + pow((r[1][j]), 2)), 3));
+    return(acc);
+}
+
+
+double distance(int i, int j)                                                                                 /******** First variable is 0 if you want distance from mass_minus, 1 for distance from mass_plus, and second variable denotes number of timesteps ********/
+{
+    double dist;
+    dist = sqrt(pow((r[0][j] - (2*i-1)), 2) + pow(r[1][j], 2));
+    return(dist);
+}
